@@ -259,140 +259,172 @@ document.addEventListener("DOMContentLoaded", function() {
     // ---------------------------------------
 
     
-    // --- 6. CONTEXT CHART (Multi-Garis) ---
-    function getTop5Provinces(data, metric) {
-        const totals = d3.rollups(data, v => d3.sum(v, d => d[metric]), d => d.Province);
-        return totals.sort((a, b) => b[1] - a[1])
-                     .slice(0, 5)
-                     .map(d => d[0]); 
-    }
+// --- 6. CONTEXT CHART (Multi-Garis) ---
+function getTop5Provinces(data, metric) {
+    const totals = d3.rollups(data, v => d3.sum(v, d => d[metric]), d => d.Province);
+    return totals.sort((a, b) => b[1] - a[1])
+                 .slice(0, 5)
+                 .map(d => d[0]); 
+}
 
-    function processTimelineData(provinces, metric) {
-        const provinceData = new Map(provinces.map(p => [p, []]));
-        const weeklyData = d3.rollups(allData, 
-            v => d3.sum(v, d => d[metric]), 
-            d => d3.timeWeek.floor(d.Date), 
-            d => d.Province 
-        );
+function processTimelineData(provinces, metric) {
+    const provinceData = new Map(provinces.map(p => [p, []]));
+    const weeklyData = d3.rollups(allData, 
+        v => d3.sum(v, d => d[metric]), 
+        d => d3.timeWeek.floor(d.Date), 
+        d => d.Province 
+    );
 
-        for (const [date, provinceMap] of weeklyData) {
-            for (const [province, value] of provinceMap) {
-                if (provinceData.has(province)) {
-                    provinceData.get(province).push({ date, value });
-                }
+    for (const [date, provinceMap] of weeklyData) {
+        for (const [province, value] of provinceMap) {
+            if (provinceData.has(province)) {
+                provinceData.get(province).push({ date, value });
             }
         }
-        
-        return Array.from(provinceData, ([province, values]) => ({
-            province,
-            values: values.sort((a, b) => a.date - b.date)
-        }));
     }
+    
+    return Array.from(provinceData, ([province, values]) => ({
+        province,
+        values: values.sort((a, b) => a.date - b.date)
+    }));
+}
 
-    function setupContextChart() {
-        top5Provinces = getTop5Provinces(allData, 'Total Cases');
-        timelineColorScale.domain(top5Provinces);
-        weeklyTotalsData = processTimelineData(top5Provinces, selectedMetric);
+function setupContextChart() {
+top5Provinces = getTop5Provinces(allData, 'Total Cases');
+timelineColorScale.domain(top5Provinces);
+weeklyTotalsData = processTimelineData(top5Provinces, selectedMetric);
 
-        contextXScale.domain(d3.extent(allData, d => d.Date));
-        contextYScale.domain([0, d3.max(weeklyTotalsData, d => d3.max(d.values, v => v.value))]);
+contextXScale.domain(d3.extent(allData, d => d.Date));
+contextYScale.domain([0, d3.max(weeklyTotalsData, d => d3.max(d.values, v => v.value))]);
 
-        contextSvg.append("g").attr("class", "context-axis").attr("transform", `translate(0,${contextHeight})`).call(d3.axisBottom(contextXScale).ticks(d3.timeYear.every(1)));
-        contextSvg.append("g").attr("class", "context-y-axis").call(d3.axisLeft(contextYScale).ticks(5).tickFormat(d3.format("~s")));
-        contextSvg.append("text").attr("class", "y-axis-label").attr("transform", "rotate(-90)").attr("y", 0 - contextMargin.left).attr("x", 0 - (contextHeight / 2)).attr("dy", "1em").text(selectedMetric);
+// --- Axis ---
+contextSvg.append("g")
+    .attr("class", "context-axis")
+    .attr("transform", `translate(0,${contextHeight})`)
+    .call(d3.axisBottom(contextXScale).ticks(d3.timeYear.every(1)));
 
-        const lineGenerator = d3.line()
-            .x(d => contextXScale(d.date))
-            .y(d => contextYScale(d.value));
+contextSvg.append("g")
+    .attr("class", "context-y-axis")
+    .call(d3.axisLeft(contextYScale).ticks(5).tickFormat(d3.format("~s")));
 
-        contextSvg.append("g")
-            .attr("class", "line-group")
-            .selectAll(".line-path")
-            .data(weeklyTotalsData, d => d.province)
-            .join("path")
-            .attr("class", "line-path")
-            .attr("d", d => lineGenerator(d.values))
-            .style("stroke", d => timelineColorScale(d.province));
-            
-        const annotations = [{ date: "2021-07-15", label: "Puncak Delta" }, { date: "2022-02-15", label: "Puncak Omicron" }];
-        annotations.forEach(ann => {
-            const xPos = contextXScale(parseDate(ann.date.replace(/-/g, '/')));
-            const g = contextSvg.append("g");
-            g.append("line").attr("class", "annotation-line").attr("x1", xPos).attr("x2", xPos).attr("y1", 0).attr("y2", contextHeight);
-            g.append("text").attr("class", "annotation-text").attr("x", xPos).attr("y", 10).text(ann.label);
+contextSvg.append("text")
+    .attr("class", "y-axis-label")
+    .attr("transform", "rotate(-90)")
+    .attr("y", 0 - contextMargin.left)
+    .attr("x", 0 - (contextHeight / 2))
+    .attr("dy", "1em")
+    .text(selectedMetric);
+
+// --- Garis utama ---
+const lineGenerator = d3.line()
+    .x(d => contextXScale(d.date))
+    .y(d => contextYScale(d.value));
+
+contextSvg.append("g")
+    .attr("class", "line-group")
+    .selectAll(".line-path")
+    .data(weeklyTotalsData, d => d.province)
+    .join("path")
+    .attr("class", "line-path")
+    .attr("d", d => lineGenerator(d.values))
+    .style("stroke", d => timelineColorScale(d.province))
+    .style("fill", "none")
+    .style("stroke-width", 2)
+    .style("opacity", 0.8);
+
+const annotations = [
+    { date: "2021-07-15", label: "Puncak Delta" },
+    { date: "2022-02-15", label: "Puncak Omicron" }
+];
+
+const annotationGroup = contextSvg.append("g").attr("class", "annotations");
+
+annotations.forEach((ann, i) => {
+    const xPos = contextXScale(parseDate(ann.date.replace(/-/g, '/')));
+    const yOffset = 20 + i * 18; // posisi vertikal berbeda biar gak tabrakan
+
+    const g = annotationGroup.append("g").attr("class", "annotation-item");
+
+    g.append("line")
+        .attr("class", "annotation-line")
+        .attr("x1", xPos)
+        .attr("x2", xPos)
+        .attr("y1", 0)
+        .attr("y2", contextHeight)
+        .attr("stroke", "red")
+        .attr("stroke-dasharray", "4 2")
+        .attr("stroke-width", 1.5);
+
+    g.append("text")
+        .attr("class", "annotation-text")
+        .attr("x", xPos + 5)
+        .attr("y", yOffset)
+        .text(ann.label)
+        .style("fill", "red")
+        .style("font-weight", "bold")
+        .style("font-size", "11px");
+});
+
+drawTimelineLegend();
+
+// --- Tooltip interaktif ---
+const timelineTooltip = d3.select(".timeline-tooltip");
+const bisectDate = d3.bisector(d => d.date).left;
+
+const overlay = contextSvg.append("rect")
+    .attr("class", "context-overlay")
+    .attr("width", contextWidth)
+    .attr("height", contextHeight)
+    .on("mouseover", () => timelineTooltip.classed("visible", true))
+    .on("mouseout", () => timelineTooltip.classed("visible", false))
+    .on("mousemove", (event) => {
+        const [mx] = d3.pointer(event);
+        const date = contextXScale.invert(mx);
+
+        let tooltipHtml = `<div class="timeline-tooltip-date">${d3.timeFormat("%b %d, %Y")(date)}</div>`;
+
+        const tooltipData = [];
+        weeklyTotalsData.forEach(prov => {
+            const index = bisectDate(prov.values, date, 1);
+            const d0 = prov.values[index - 1];
+            const d1 = prov.values[index];
+            const d = (d1 && (date - d0.date > d1.date - date)) ? d1 : d0;
+            if (d) tooltipData.push({ province: prov.province, value: d.value });
         });
 
-        drawTimelineLegend();
+        tooltipData.sort((a, b) => b.value - a.value);
 
-        // --- Logika Tooltip Hover ---
-        const timelineTooltip = d3.select(".timeline-tooltip");
-        const bisectDate = d3.bisector(d => d.date).left;
+        tooltipData.forEach(d => {
+            tooltipHtml += `
+                <div class="tooltip-line" style="color: ${timelineColorScale(d.province)}">
+                    ${d.province}: <span>${formatNumber(d.value)}</span>
+                </div>`;
+        });
 
-        const overlay = contextSvg.append("rect")
-            .attr("class", "context-overlay")
-            .attr("width", contextWidth)
-            .attr("height", contextHeight)
-            .on("mouseover", () => timelineTooltip.classed("visible", true))
-            .on("mouseout", () => timelineTooltip.classed("visible", false))
-            .on("mousemove", (event) => {
-                const [mx] = d3.pointer(event);
-                const date = contextXScale.invert(mx);
-                
-                let tooltipHtml = `<div class="timeline-tooltip-date">${d3.timeFormat("%b %d, %Y")(date)}</div>`;
-                
-                // Urutkan data tooltip berdasarkan nilai, dari tertinggi ke terendah
-                const tooltipData = [];
-                
-                weeklyTotalsData.forEach(prov => {
-                    const index = bisectDate(prov.values, date, 1);
-                    const d0 = prov.values[index - 1];
-                    const d1 = prov.values[index];
-                    const d = (d1 && (date - d0.date > d1.date - date)) ? d1 : d0;
-                    
-                    if (d) {
-                        tooltipData.push({
-                            province: prov.province,
-                            value: d.value
-                        });
-                    }
-                });
+        timelineTooltip.html(tooltipHtml)
+            .style("left", (event.pageX + 15) + "px")
+            .style("top", (event.pageY - 28) + "px");
+    });
 
-                // Urutkan
-                tooltipData.sort((a, b) => b.value - a.value);
+// --- Brush ---
+const brush = d3.brushX().extent([[0, 0], [contextWidth, contextHeight]]).on("end", brushed);
+contextSvg.append("g").attr("class", "brush").call(brush);
 
-                // Buat HTML
-                tooltipData.forEach(d => {
-                    tooltipHtml += `
-                        <div class="tooltip-line" style="color: ${timelineColorScale(d.province)}">
-                            ${d.province}: <span>${formatNumber(d.value)}</span>
-                        </div>
-                    `;
-                });
-
-                timelineTooltip.html(tooltipHtml)
-                    .style("left", (event.pageX + 15) + "px")
-                    .style("top", (event.pageY - 28) + "px");
-            });
-
-        // Brush (Tetap)
-        const brush = d3.brushX().extent([[0, 0], [contextWidth, contextHeight]]).on("end", brushed);
-        contextSvg.append("g").attr("class", "brush").call(brush);
-
-        function brushed({ selection }) {
-            timelineTooltip.classed("visible", false);
-            if (selection) {
-                const [x0, x1] = selection.map(contextXScale.invert);
-                filteredDateRange = dateRange.filter(d => d >= x0 && d <= x1);
-            } else {
-                filteredDateRange = dateRange;
-            }
-            dateSlider.attr("max", filteredDateRange.length - 1);
-            dateSlider.property("value", 0);
-            updateColorScale(); 
-            update(0);
-            hideModal(); 
-        }
+function brushed({ selection }) {
+    timelineTooltip.classed("visible", false);
+    if (selection) {
+        const [x0, x1] = selection.map(contextXScale.invert);
+        filteredDateRange = dateRange.filter(d => d >= x0 && d <= x1);
+    } else {
+        filteredDateRange = dateRange;
     }
+    dateSlider.attr("max", filteredDateRange.length - 1);
+    dateSlider.property("value", 0);
+    updateColorScale();
+    update(0);
+    hideModal();
+}
+}
     
     // --- 7. UPDATE CONTEXT CHART (Multi-Garis) ---
     function updateContextChart() {
