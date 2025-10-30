@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function() {
     let isPlaying = false;
     let selectedMetric = 'New Cases';
     let allData, nestedData, dateRange, filteredDateRange, geoData, nationalTotalsByDate, weeklyTotalsData, top5Provinces;
-
+    let currentDataByProvinceCache = null;
     // Kamus Penerjemah (Tetap)
     const geoJsonToCsvNameMap = {
         "Jakarta Raya": "DKI Jakarta",
@@ -36,7 +36,18 @@ document.addEventListener("DOMContentLoaded", function() {
     const mapGroup = svg.append("g"); 
     const contextSvg = d3.select("#context-chart").attr("viewBox", `0 0 ${contextChartWidth} ${contextChartHeight}`)
         .append("g").attr("transform", `translate(${contextMargin.left},${contextMargin.top})`);
-    
+    const mapTooltip = d3.select("body")
+        .append("div")
+        .attr("class", "map-tooltip")
+        .style("position", "absolute")
+        .style("pointer-events", "none")
+        .style("padding", "8px 10px")
+        .style("border-radius", "6px")
+        .style("background", "rgba(20,20,20,0.9)")
+        .style("color", "#fff")
+        .style("font", "12px/1.3 sans-serif")
+        .style("box-shadow", "0 2px 6px rgba(0,0,0,0.3)")
+        .style("opacity", 0);
     // Elemen Modal (Tetap)
     const modalOverlay = d3.select("#modal-overlay");
     const modalTitle = d3.select("#modal-title");
@@ -148,7 +159,36 @@ document.addEventListener("DOMContentLoaded", function() {
             .append("path")
             .attr("class", "province")
             .attr("d", path)
-            .attr("fill", "#444") 
+            .attr("fill", "#444")
+            
+            
+            // HOVER MULAI  // <-- BARU
+    .on("mouseenter", function(event, d) {
+      d3.select(this).classed("hovered", true);
+      mapTooltip.style("opacity", 1);
+    })
+    .on("mousemove", function(event, d) {
+      const geoJsonName = d.properties.name;
+      const csvName = getCsvName(geoJsonName);
+      const currentDate = filteredDateRange[+dateSlider.property("value")];
+      const provData = currentDataByProvinceCache?.get(csvName);
+      const metricLabel = selectedMetric;
+      const val = provData ? provData[metricLabel] : null;
+
+      let html = `<div style="font-weight:600;margin-bottom:4px">${csvName}</div>`;
+      html += `<div style="opacity:.8">${d3.timeFormat("%b %d, %Y")(currentDate)}</div>`;
+      html += val != null
+        ? `<div style="margin-top:6px">${metricLabel}: <b>${formatNumber(val)}</b></div>`
+        : `<div style="margin-top:6px"><i>Data tidak tersedia</i></div>`;
+
+      mapTooltip.html(html)
+        .style("left", (event.pageX + 14) + "px")
+        .style("top", (event.pageY - 24) + "px");
+    })
+    .on("mouseleave", function() {
+      d3.select(this).classed("hovered", false);
+      mapTooltip.style("opacity", 0);
+    })
             .on("click", (event, d) => {
                 const geoJsonName = d.properties.name; 
                 const csvName = getCsvName(geoJsonName); 
@@ -459,6 +499,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         const currentDataByProvince = dataByProvinceByDate.get(currentDate);
+        currentDataByProvinceCache = currentDataByProvince;
         if (!currentDataByProvince) return; 
         
         mapGroup.selectAll("path.province")
