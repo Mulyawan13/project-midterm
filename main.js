@@ -207,17 +207,19 @@ document.addEventListener("DOMContentLoaded", function() {
     
     // --- 5. FUNGSI MODAL (Dirombak Total) ---
     function showModal(feature, provinceName, date, data) {
-        if (isPlaying) {
-            togglePlay(); // Jeda animasi
-        }
-        
-        modalInfoContainer.selectAll("p, hr").remove();
-        
-        modalTitle.text(provinceName);
-        modalDate.text(formatDate(date));
-        
+        if (isPlaying) togglePlay(); // Jeda animasi jika sedang play
+    
+        // --- Bersihkan isi modal sepenuhnya termasuk teks lama ---
+        modalInfoContainer.html(""); // ✅ ini menghapus SEMUA isi di dalam container
+    
+        // --- Buat ulang struktur info container dengan title dan date ---
+        modalInfoContainer.node().innerHTML = `
+            <h2 id="modal-title">${provinceName}</h2>
+            <p id="modal-date" class="date">${formatDate(date)}</p>
+        `;
+    
         let description = "";
-
+    
         if (data) {
             modalInfoContainer.node().innerHTML += `
                 <p class="new-cases">Kasus Baru: <span>${formatNumber(data['New Cases'])}</span></p>
@@ -227,18 +229,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 <p>Total Kematian: <span>${formatNumber(data['Total Deaths'])}</span></p>
                 <p>Total Sembuh: <span>${formatNumber(data['Total Recovered'])}</span></p>
             `;
-            description = `Pada ${formatDate(date)}, <strong>${provinceName}</strong> mencatat <strong>${formatNumber(data['New Cases'])} kasus baru</strong> dan <strong>${formatNumber(data['New Deaths'])} kematian baru</strong>. Angka ini menambah total kasus kumulatif di provinsi ini menjadi ${formatNumber(data['Total Cases'])}. Dari total tersebut, ${formatNumber(data['Total Recovered'])} orang telah dinyatakan sembuh.`;
+    
+            description = `Pada ${formatDate(date)}, <strong>${provinceName}</strong> mencatat <strong>${formatNumber(data['New Cases'])} kasus baru</strong> dan <strong>${formatNumber(data['New Deaths'])} kematian baru</strong>. 
+            Angka ini menambah total kasus kumulatif di provinsi ini menjadi ${formatNumber(data['Total Cases'])}. 
+            Dari total tersebut, ${formatNumber(data['Total Recovered'])} orang telah dinyatakan sembuh.`;
         } else {
             modalInfoContainer.node().innerHTML += `<p>Tidak ada data untuk tanggal ini.</p>`;
             description = `Tidak ada data yang dilaporkan untuk ${provinceName} pada ${formatDate(date)}.`;
         }
-        
+    
         modalDescriptionText.html(description);
         drawModalMap(feature);
-
+    
+        // Tampilkan modal
         modalOverlay.classed("visible", true);
         mainContainer.classed("blurred", true);
     }
+    
 
     function hideModal() {
         modalOverlay.classed("visible", false);
