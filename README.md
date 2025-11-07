@@ -12,7 +12,6 @@
 - Klik provinsi untuk membuka **modal detail provinsi** berisi data lengkap dan mini map.
 
 ### 📈 Grafik Timeline Interaktif
-- Menampilkan tren mingguan **Top 5 provinsi** dengan jumlah kasus tertinggi.
 - Dilengkapi **tooltip dinamis** dan **brush** untuk memfilter rentang tanggal.
 - Ada **anotasi naratif** untuk puncak gelombang Delta (2021) dan Omicron (2022).
 
