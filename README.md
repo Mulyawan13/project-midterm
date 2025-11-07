@@ -27,12 +27,6 @@
   - Total Kasus
   - Total Kematian
 
-### 🏆 Top 3 Total Kasus Kumulatif
-- Panel tambahan yang menampilkan **3 provinsi dengan total kasus tertinggi** selama pandemi.
-- Menggunakan snapshot data terakhir untuk setiap provinsi.
-
----
-
 ## 🧠 Teknologi yang Digunakan
 - [D3.js v7](https://d3js.org/) — library utama untuk visualisasi interaktif berbasis SVG.
 - **HTML5 + CSS3** — layout & gaya antarmuka.
