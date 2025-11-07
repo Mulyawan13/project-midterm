@@ -19,7 +19,7 @@
 - Slider waktu + tombol **Play/Pause** untuk menjelajahi data per tanggal.
 - Animasi halus antar frame untuk memperlihatkan perubahan tren waktu ke waktu.
 
-### 📊 Ringkasan KPI
+### 📊 Ringkasan Key Perfomance Indicator
 - Menampilkan angka nasional terkini:
   - Kasus Baru
   - Kematian Baru
